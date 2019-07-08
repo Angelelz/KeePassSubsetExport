@@ -25,6 +25,8 @@ namespace KeePassSubsetExport
 
         private static readonly IOConnectionInfo ConnectionInfo = new IOConnectionInfo();
 
+        private static string currentJob = "";
+
         /// <summary>
         /// Exports all entries with the given tag to a new database at the given path (multiple jobs possible).
         /// Each job is an entry in the "SubsetExportSettings" folder with a title "SubsetExport_*".
@@ -49,6 +51,7 @@ namespace KeePassSubsetExport
             {
                 // Load settings for this job
                 var settings = Settings.Parse(settingsEntry, sourceDb);
+                currentJob = settingsEntry.Strings.GetSafe(PwDefs.TitleField).ReadString();
 
                 // Skip disabled/expired jobs
                 if (settings.Disabled)
@@ -303,19 +306,18 @@ namespace KeePassSubsetExport
                 }
                 else
                 {
-                    //[WIP]Implement a way to copy title, url and maybe notes?
-                    peNew.Strings.Set(PwDefs.TitleField,
-                            entry.Strings.GetSafe(PwDefs.TitleField));
-                    peNew.Strings.Set(PwDefs.UrlField,
-                            entry.Strings.GetSafe(PwDefs.UrlField));
+                    //[WIP]Implement copy maybe notes?
                     //peNew.Strings.Set(PwDefs.NotesField,
                     //        entry.Strings.GetSafe(PwDefs.NotesField));
                 }
-
+                peNew.Strings.Set(PwDefs.TitleField,
+                    Settings.GetFieldWRef(entry, sourceDb, PwDefs.TitleField));
                 peNew.Strings.Set(PwDefs.UserNameField,
-                    Settings.GetUser(entry, sourceDb));
+                    Settings.GetFieldWRef(entry, sourceDb, PwDefs.UserNameField));
                 peNew.Strings.Set(PwDefs.PasswordField,
-                    Settings.GetPass(entry, sourceDb));
+                    Settings.GetFieldWRef(entry, sourceDb, PwDefs.PasswordField));
+                peNew.Strings.Set(PwDefs.UrlField,
+                    Settings.GetFieldWRef(entry, sourceDb, PwDefs.UrlField));
 
                 // Handle custom icon
                 HandleCustomIcon(targetDatabase, sourceDb, entry);
@@ -544,7 +546,8 @@ namespace KeePassSubsetExport
             }
             else
             {
-                MessageService.ShowWarning("Group not found in target database. OverrideEntireGroup will not work");
+                MessageService.ShowWarning("Group not found in target database to apply OverrideEntireGroup for Job: "
+                    + currentJob +". Is this the first time you make this export?");
             }
 
         }
