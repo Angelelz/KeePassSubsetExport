@@ -9,6 +9,7 @@ using KeePassLib.Interfaces;
 using KeePassLib.Keys;
 using KeePassLib.Serialization;
 using KeePassLib.Utility;
+using KeePassLib.Security;
 
 namespace KeePassSubsetExport
 {
@@ -23,6 +24,8 @@ namespace KeePassSubsetExport
             0x91, 0xF7, 0xA9, 0xA4, 0x03, 0xE3, 0x0A, 0x0C });
 
         private static readonly IOConnectionInfo ConnectionInfo = new IOConnectionInfo();
+
+        private static string currentJob = "";
 
         /// <summary>
         /// Exports all entries with the given tag to a new database at the given path (multiple jobs possible).
@@ -47,7 +50,8 @@ namespace KeePassSubsetExport
             foreach (var settingsEntry in jobSettings)
             {
                 // Load settings for this job
-                var settings = Settings.Parse(settingsEntry);
+                var settings = Settings.Parse(settingsEntry, sourceDb);
+                currentJob = settingsEntry.Strings.GetSafe(PwDefs.TitleField).ReadString();
 
                 // Skip disabled/expired jobs
                 if (settings.Disabled)
@@ -294,8 +298,25 @@ namespace KeePassSubsetExport
                     targetGroup.AddEntry(peNew, true);
                 }
 
-                // Clone entry properties
-                peNew.AssignProperties(entry, false, true, true);
+                // Clone entry properties if ExportUserAndPassOnly is false
+                if (!settings.ExportUserAndPassOnly)
+                {
+                    peNew.AssignProperties(entry, false, true, true);
+                }
+                else
+                {
+                    //[WIP]Implement copy maybe notes?
+                    //peNew.Strings.Set(PwDefs.NotesField,
+                    //        entry.Strings.GetSafe(PwDefs.NotesField));
+                }
+                peNew.Strings.Set(PwDefs.TitleField,
+                    Settings.GetFieldWRef(entry, sourceDb, PwDefs.TitleField));
+                peNew.Strings.Set(PwDefs.UserNameField,
+                    Settings.GetFieldWRef(entry, sourceDb, PwDefs.UserNameField));
+                peNew.Strings.Set(PwDefs.PasswordField,
+                    Settings.GetFieldWRef(entry, sourceDb, PwDefs.PasswordField));
+                peNew.Strings.Set(PwDefs.UrlField,
+                    Settings.GetFieldWRef(entry, sourceDb, PwDefs.UrlField));
 
                 // Handle custom icon
                 HandleCustomIcon(targetDatabase, sourceDb, entry);
